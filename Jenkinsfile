@@ -1,9 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-    git 'Default'
-}
     environment {
         DOCKERHUB_CREDENTIALS = credentials('Docker') 
         DOCKER_IMAGE = 'ashwati13/react-app'
@@ -11,8 +8,8 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm
-            }
+                git url: 'https://github.com/ashwati13/docker-reactjs', branch: 'master'
+                  }
         }
 
         stage('Run Tests') {
