@@ -1,5 +1,9 @@
 pipeline {
     agent any
+
+    tools {
+    git 'Default'
+}
     environment {
         DOCKERHUB_CREDENTIALS = credentials('Dockerhub') // Jenkins credential ID
         DOCKER_IMAGE = 'ashwati13/react-app'
