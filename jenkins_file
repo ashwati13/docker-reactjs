@@ -1,71 +1,76 @@
 pipeline {
     agent any
 
-    tools {
-    git 'Default'
+ environment {
+            
+            Sonar_Server = 'Sonar13'
+            NEXUS_CREDS = credentials('Nexus') // Nexus credential ID
+        NEXUS_DOCKER_REPO = 'http://16.171.134.119:8082'
+
 }
-    environment {
-        DOCKERHUB_CREDENTIALS = credentials('Dockerhub') // Jenkins credential ID
-        DOCKER_IMAGE = 'ashwati13/react-app'
-        SONARQUBE_SERVER = 'Sonar' // SonarQube server name in Jenkins
-        NEXUS_CREDENTIALS = credentials('Nexus') // Nexus credential ID
-    }
+
+
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm
-            }
+                git url: 'https://github.com/ashwati13/docker-reactjs', branch: 'master'
+                  }
         }
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv("${SONARQUBE_SERVER}") {
-                    sh 'npm install'
-                    sh 'sonar-scanner'
-                }
-            }
-        }
-        stage('Run Tests') {
-            steps {
-                sh 'npm test -- --coverage'
-            }
-        }
-        stage('Build Docker Image') {
+        
+        
+        
+     stage('SonarQube Scan') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
-                }
-            }
-        }
-        stage('Push to Nexus') {
-            steps {
-                script {
-                    sh """
-                    docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} 13.53.41.254:8081/repository/react_app/${DOCKER_IMAGE}:${BUILD_NUMBER}
-                    docker login -u ${NEXUS_CREDENTIALS_USR} -p ${NEXUS_CREDENTIALS_PSW} nexus.example.com
-                    docker push nexus.example.com/repository/docker/${DOCKER_IMAGE}:${BUILD_NUMBER}
-                    """
-                }
-            }
-        }
-        stage('Push to Docker Hub') {
-            steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'DOCKERHUB_CREDENTIALS') {
-                        sh "docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                    withSonarQubeEnv('Sonar13') { // Replace with your SonarQube server name
+                        sh '''
+                        # Install dependencies
+                        npm install
+                        
+                        # Run SonarQube Scanner
+                        npx sonar-scanner \
+                            -Dsonar.projectKey=react-app
+                        '''
                     }
                 }
             }
         }
-        stage('Deploy Application') {
+        
+        
+        
+     
+        
+        
+        stage('Nexus') {
             steps {
-                sh 'docker-compose down'
-                sh 'docker-compose up -d'
+                echo 'Nexus Docker Repository Login'
+                script{
+                    withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USER', passwordVariable: 'PASS' )]){
+                       sh ' echo $PASS | docker login -u $USER --password-stdin 16.171.134.119:8082'
+                    echo 'Building docker Image'
+                    sh 'docker push ashwati13/docker_react-app'
+                    }
+                   
+                }
+            }
+    } 
+        
+        
+        
+        
+        stage('Run Tests') {
+            steps {
+                sh 'git --version'
             }
         }
-    }
-    post {
-        always {
-            cleanWs()
+        
+        stage('Deploy Application') {
+            steps {
+
+                sh 'sudo docker-compose up -d'
+            }
         }
+
     }
+    
 }
