@@ -4,6 +4,9 @@ pipeline {
  environment {
             
             Sonar_Server = 'Sonar13'
+            NEXUS_CREDS = credentials('Nexus') // Nexus credential ID
+        NEXUS_DOCKER_REPO = 'http://16.171.134.119:8082'
+
 }
 
 
@@ -27,7 +30,6 @@ pipeline {
                         # Run SonarQube Scanner
                         npx sonar-scanner \
                             -Dsonar.projectKey=react-app
-
                         '''
                     }
                 }
@@ -35,27 +37,28 @@ pipeline {
         }
         
         
-        
-        
-        
-        
-        stage('Deploy') {
-          steps {
-              withCredentials([usernamePassword(credentialsId: "${DOCKER_CRED}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                 sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin docker.io"
-                  sh 'sudo docker push ashwati13/docker_react-app'
-        }
-      }
-    } 
-        
-        
-        
-        
         stage('Run Tests') {
             steps {
                 sh 'git --version'
             }
-        }
+        }  
+     
+        
+        
+        stage('Nexus') {
+            steps {
+                echo 'Nexus Docker Repository Login'
+                script{
+                    withCredentials([usernamePassword(credentialsId: 'nexus_creds', usernameVariable: 'USER', passwordVariable: 'PASS' )]){
+                       sh ' echo $PASS | docker login -u $USER --password-stdin 16.171.134.119:8082'
+                    echo 'Building docker Image'
+                    sh 'docker push ashwati13/docker_react-app'
+                    }
+                   
+                }
+            }
+    } 
+        
         
         stage('Deploy Application') {
             steps {
@@ -67,3 +70,4 @@ pipeline {
     }
     
 }
+  
